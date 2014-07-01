@@ -12,7 +12,7 @@ Quickstart
 
 Just paste this into a terminal: 
 
-    curl -s https://raw.githubusercontent.com/xdissent/ievms/master/ievms.sh | bash
+    curl -s https://raw.githubusercontent.com/kalw/ievms/master/ievms.sh | bash
 
 
 Requirements
@@ -231,6 +231,7 @@ and registry editor.
 * [regit-config](https://github.com/regit/regit-config) - Minimal Virtualbox
 kernel config reference.
 * [uck](http://sourceforge.net/projects/uck/) - Used to (re)master control ISO.
+* [webpagetest](www.webpagetest.org) - End User Performance measurement
 
 License
 =======
