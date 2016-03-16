@@ -399,11 +399,11 @@ install_wpt_agent() { # $1 "${vm}|IE6 - WinXP" $2 "${WPT_FILENAME}|webpagetest_$
 cat > startup.bat <<'EOF'
 
 echo Set oWS = WScript.CreateObject("WScript.Shell") > startup.vbs
-echo sLinkFile ="%HOMEDRIVE%%HOMEPATH%\Start Menu\Programs\Startup\wptdriver.lnk" >> startup.vbs
+echo sLinkFile ="%HOMEDRIVE%%HOMEPATH%\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup\wptdriver.lnk" >> startup.vbs
 echo Set oLink = oWS.CreateShortcut(sLinkFile) >> startup.vbs
 echo oLink.TargetPath = "C:\webpagetest\agent\wptdriver.exe" >> startup.vbs
 echo oLink.Save >> startup.vbs
-echo sLinkFile = "%HOMEDRIVE%%HOMEPATH%\Start Menu\Programs\Startup\ipfw.lnk" >> startup.vbs
+echo sLinkFile = "%HOMEDRIVE%%HOMEPATH%\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup\ipfw.lnk" >> startup.vbs
 echo Set oLink = oWS.CreateShortcut(sLinkFile) >> startup.vbs
 echo oLink.TargetPath = "C:\webpagetest\agent\dummynet\ipfw.bat" >> startup.vbs
 echo oLink.Save >> startup.vbs
