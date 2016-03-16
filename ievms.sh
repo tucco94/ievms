@@ -403,7 +403,6 @@ echo sLinkFile ="%HOMEDRIVE%%HOMEPATH%\Start Menu\Programs\Startup\wptdriver.lnk
 echo Set oLink = oWS.CreateShortcut(sLinkFile) >> startup.vbs
 echo oLink.TargetPath = "C:\webpagetest\agent\wptdriver.exe" >> startup.vbs
 echo oLink.Save >> startup.vbs
-
 echo sLinkFile = "%HOMEDRIVE%%HOMEPATH%\Start Menu\Programs\Startup\ipfw.lnk" >> startup.vbs
 echo Set oLink = oWS.CreateShortcut(sLinkFile) >> startup.vbs
 echo oLink.TargetPath = "C:\webpagetest\agent\dummynet\ipfw.bat" >> startup.vbs
