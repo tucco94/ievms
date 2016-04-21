@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+*#!/usr/bin/env bash
 
 export PATH=$PATH:/usr/local/bin/
 
@@ -541,6 +541,9 @@ fi
 			"c:\\webpagetest\\certutil –addstore –f TrustedPublisher c:\\webpagetest\\WPOFoundation.cer "
 		guest_control_exec "${1}" "cmd.exe" /c \
 			"c:\\webpagetest\\mindinst.exe c:\\webpagetest\\agent\\dummynet\\32bit\\netipfw.inf -i -s "
+		guest_control_exec "${1}" "cmd.exe" /c \
+        		"shutdown.exe /s /f /t 0"
+        	wait_for_guestcontrol "${1}"
 
 	else
 		log "on correct directory"
@@ -551,22 +554,23 @@ fi
                 "echo start /wait %windir%\System32\reg.exe ADD HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System /v EnableLUA /t REG_DWORD /d 0 /f >>c:\webpagetest\wpt.bat"
                 log "Disable driver installation integrity checks"
                 guest_control_exec "${1}" "cmd.exe" /c \
-                        "bcdedit.exe -set nointegritychecks ON >>c:\\webpagetest\\wpt.bat"
+                        "echo start bcdedit.exe -set nointegritychecks ON >>c:\\webpagetest\\wpt.bat"
                 guest_control_exec "${1}" "cmd.exe" /c \
-                        "bcdedit.exe -set TESTSIGNING ON >>c:\\webpagetest\\wpt.bat"
+                        "echo startbcdedit.exe -set TESTSIGNING ON >>c:\\webpagetest\\wpt.bat"
                 guest_control_exec "${1}" "cmd.exe" /c \
-                        "bcdedit /set {default} bootstatuspolicy ignoreallfailures >>c:\\webpagetest\\wpt.bat"
-                guest_control_exec "${1}" "cmd.exe" /c \
-			             "copy c:\webpagetest\wpt.bat C:\Users\\${guest_user}\\ievms.bat"
-                guest_control_exec "${1}" "schtasks.exe" /run /tn ievms
-
+                        "echo startbcdedit /set {default} bootstatuspolicy ignoreallfailures >>c:\\webpagetest\\wpt.bat"
 		guest_control_exec "${1}" "cmd.exe" /c \
 			"echo start Certutil –addstore –f TrustedPublisher c:\\webpagetest\\WPOFoundation.cer >>c:\\webpagetest\\wpt.bat"
 		guest_control_exec "${1}" "cmd.exe" /c \
 			"echo start  c:\\webpagetest\\mindinst.exe c:\\webpagetest\\agent\\dummynet\\netipfw.inf -i -s >>c:\\webpagetest\\wpt.bat"
 		guest_control_exec "${1}" "cmd.exe" /c \
-			"copy c:\webpagetest\wpt.bat C:\Users\\${guest_user}\\ievms.bat"
-		guest_control_exec "${1}" "schtasks.exe" /run /tn ievms
+			"echo shutdown.exe /s /f /t 0 >>C:\\Users\\${guest_user}\\wpt.bat"
+		guest_control_exec "${1}" "cmd.exe" /c \
+			             "copy c:\webpagetest\wpt.bat C:\Users\\${guest_user}\\ievms.bat"
+                guest_control_exec "${1}" "schtasks.exe" /run /tn ievms
+
+    		wait_for_guestcontrol "${1}"
+
 	fi
 	
 	# powersavings autoit script tbd
@@ -637,12 +641,16 @@ install_ie_win7() { # vm url md5
 
     log "Installing IE"
     guest_control_exec "${1}" "cmd.exe" /c \
-        "echo ${dest} /passive /norestart >C:\\Users\\${guest_user}\\ievms.bat"
+        "echo ${dest} /passive /norestart >C:\\Users\\${guest_user}\\wpt.bat"
     guest_control_exec "${1}" "cmd.exe" /c \
-        "echo shutdown.exe /s /f /t 0 >>C:\\Users\\${guest_user}\\ievms.bat"
+        "echo shutdown.exe /s /f /t 0 >>C:\\Users\\${guest_user}\\wpt.bat"
     guest_control_exec "${1}" "schtasks.exe" /run /tn ievms
 
     wait_for_guestcontrol "${1}"
+
+    guest_control_exec "${1}" "shutdown.exe" /s /f /t 0
+    wait_for_shutdown "${1}"
+
 }
 
 
@@ -659,9 +667,9 @@ install_ie_win2k8() { # vm url md5
 
     log "Installing IE"
     guest_control_exec "${1}" "cmd.exe" /c \
-        "echo ${dest} /passive /norestart >C:\\Users\\${guest_user}\\ievms.bat"
+        "echo ${dest} /passive /norestart >C:\\Users\\${guest_user}\\wpt.bat"
     guest_control_exec "${1}" "cmd.exe" /c \
-        "echo shutdown.exe /s /f /t 0 >>C:\\Users\\${guest_user}\\ievms.bat"
+        "echo shutdown.exe /s /f /t 0 >>C:\\Users\\${guest_user}\\wpt.bat"
     guest_control_exec "${1}" "schtasks.exe" /run /tn ievms
 
     wait_for_guestcontrol "${1}"
@@ -774,11 +782,11 @@ build_ievm() {
 
         log "Creating clean snapshot"
         VBoxManage snapshot "${vm}" take clean --description "The initial VM state"
-	sleep 200
+	#sleep 200
 
 # Shutdown the Vm to finish installation
-
-        log "Shutting down vm"
+	sleep 200
+	log "Shutting down vm"
         guest_control_exec "${vm}" "shutdown.exe" /s /f /t 0
         wait_for_shutdown "${vm}"
 
@@ -837,12 +845,15 @@ build_ievm_ie10() {
     if [ "${reuse_win7}" != "yes" ]
     then
         boot_auto_ga "IE10 - Win2k8"
-	install_wpt_agent "IE10 - Win2k8" "${WPT_FILENAME}" "${os}"
 	install_ie_win2k8  "IE10 - Win2k8" "http://download.microsoft.com/download/C/E/0/CE0AB8AE-E6B7-43F7-9290-F8EB0EA54FB5/IE10-Windows6.1-x64-en-us.exe" "7ca1f1f4ab4e9599e2fa79d2684562da"
-    else 
+	install_wpt_agent "IE10 - Win2k8" "${WPT_FILENAME}" "${os}"
+
+    else
+ 
         boot_auto_ga "IE10 - Win7"
-		install_wpt_agent "IE10 - Win7" "${WPT_FILENAME}" "${os}"
         install_ie_win7 "IE10 - Win7" "http://download.microsoft.com/download/8/A/C/8AC7C482-BC74-492E-B978-7ED04900CEDE/IE10-Windows6.1-x86-en-us.exe" "0f14b2de0b3cef611b9c1424049e996b"
+	install_wpt_agent "IE10 - Win7" "${WPT_FILENAME}" "${os}"
+
     fi
 }
 
@@ -879,7 +890,7 @@ check_unar
 ## Install each requested virtual machine sequentially.
 #all_versions="6 7 8 9 10 11 EDGE" IE6 et 7 will not work w/wptdriver ; urlblast only
 all_versions="8 9 10 11"
-IEVMS_VERSIONS="9"
+IEVMS_VERSIONS="10"
 for ver in ${IEVMS_VERSIONS:-$all_versions}
 do
 	### wpt
