@@ -5,8 +5,8 @@ export PATH=$PATH:/usr/local/bin/
 # Caution is a virtue.
 set -o nounset
 set -o errtrace
-set -o errexit
-set -o pipefail
+#set -o errexit
+#set -o pipefail
 set -x
 # ## Gobal Variables
 
@@ -23,6 +23,9 @@ reuse_xp=${REUSE_XP:-"no"}
 
 # Reuse Win7 virtual machines for IE versions that are supported.
 reuse_win7=${REUSE_WIN7:-"yes"}
+
+# Reuse Win2k8 virtual machines for IE versions that are supported.
+reuse_win2k8=${REUSE_WIN2K8:-"no"}
 
 # Timeout interval to wait between checks for various states.
 sleep_wait="5"
@@ -311,9 +314,7 @@ shutdown_xp() {
     wait_for_shutdown "${1}"
 }
 
-#
-# Install wptdriver and urlblast
-#
+# Install wptdriver and urlblast 
 init_wpt_agent(){ # $1 IEVM(_IE8)|Location $2 2.14|"" $3 dda3a3a92924a99a752dea12dd5db470|"" $4 WPT_SERVER_URL
  
 	if [ "$1" == "" ]
@@ -395,20 +396,36 @@ install_wpt_agent() { # $1 "${vm}|IE6 - WinXP" $2 "${WPT_FILENAME}|webpagetest_$
 	#if [[ ! -f "ahk.exe" ]]; then
 	#	curl -s -L http://ahkscript.org/download/ahk-install.exe -o ahk.exe
 	#fi
-	
-cat > startup.bat <<'EOF'
 
+if [ "${os}" == "WinXP" ]
+then
+cat > startup.bat <<'EOF'
 echo Set oWS = WScript.CreateObject("WScript.Shell") > startup.vbs
-echo sLinkFile ="%HOMEDRIVE%%HOMEPATH%\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup\wptdriver.lnk" >> startup.vbs
+echo sLinkFile = "C:\Documents and Settings\IEUser\Start Menu\Programs\Startup\wptdriver.lnk" >> startup.vbs
 echo Set oLink = oWS.CreateShortcut(sLinkFile) >> startup.vbs
 echo oLink.TargetPath = "C:\webpagetest\agent\wptdriver.exe" >> startup.vbs
 echo oLink.Save >> startup.vbs
-echo sLinkFile = "%HOMEDRIVE%%HOMEPATH%\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup\ipfw.lnk" >> startup.vbs
+echo sLinkFile = "C:\Documents and Settings\IEUser\Start Menu\Programs\Startup\ipfw.lnk" >> startup.vbs
 echo Set oLink = oWS.CreateShortcut(sLinkFile) >> startup.vbs
-echo oLink.TargetPath = "C:\webpagetest\agent\dummynet\ipfw.bat" >> startup.vbs
+echo oLink.TargetPath = "C:\webpagetest\agent\dummynet\ipfw.cmd" >> startup.vbs
 echo oLink.Save >> startup.vbs
 cscript startup.vbs
 EOF
+
+else
+cat > startup.bat <<'EOF'
+echo Set oWS = WScript.CreateObject("WScript.Shell") > startup.vbs
+echo sLinkFile = "C:\Users\IEUser\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup\wptdriver.lnk" >> startup.vbs
+echo Set oLink = oWS.CreateShortcut(sLinkFile) >> startup.vbs
+echo oLink.TargetPath = "C:\webpagetest\agent\wptdriver.exe" >> startup.vbs
+echo oLink.Save >> startup.vbs
+echo sLinkFile = "c:\Users\IEUser\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup\ipfw.lnk" >> startup.vbs
+echo Set oLink = oWS.CreateShortcut(sLinkFile) >> startup.vbs
+echo oLink.TargetPath = "C:\webpagetest\agent\dummynet\ipfw.cmd" >> startup.vbs
+echo oLink.Save >> startup.vbs
+cscript startup.vbs
+EOF
+fi
 
 	
 	log "extracting sample configuration"
@@ -445,11 +462,10 @@ EOF
 	guest_control_exec "${1}" "cmd.exe" /c \
 		"echo @ECHO ON >>c:\\webpagetest\\wpt.bat"
 	
-	
-	log "Intalling 7z"
+
+	log "Installing 7z"
 	guest_control_exec "${1}" "cmd.exe" /c \
 		"echo start /wait msiexec /i C:\webpagetest\7z.msi /quiet /q INSTALLDIR=C:\7zip >>c:\\webpagetest\\wpt.bat"
-
 	log "Unzip wpt agent"
 	guest_control_exec "${1}" "cmd.exe" /c \
 		"echo c:\7zip\7z.exe x c:\webpagetest\webpagetest_${WPT_VERSION}.zip -y -oc:\webpagetest agent/* >>c:\\webpagetest\\wpt.bat"
@@ -463,39 +479,33 @@ EOF
 	log "Intalling Safari"
 	guest_control_exec "${1}" "cmd.exe" /c \
 		"echo start /wait c:\webpagetest\SafariSetup.exe /quiet >>c:\\webpagetest\\wpt.bat"
-	
 	log "Intalling AutoIT"
 	guest_control_exec "${1}" "cmd.exe" /c \
 		"echo start /wait c:\webpagetest\autoit.exe /S /D=C:\AutoIT >>c:\\webpagetest\\wpt.bat"
-	
 	log "Installing Cloudbase-init"
 	guest_control_exec "${1}" "cmd.exe" /c \
-		"echo start /wait msiexec /i c:\webpagetest\CloudbaseInitSetup.msi /qn /l*v log.cloudbase.txt >>c:\\webpagetest\\wpt.bat"	
-
+		"echo start /wait msiexec /i c:\webpagetest\CloudbaseInitSetup.msi /qn /l*v log.cloudbase.txt >>c:\\webpagetest\\wpt.bat"
 	#log "Installing AHK"
 	#guest_control_exec "${1}" "cmd.exe" /c \
 	#	"echo start /wait c:\webpagetest\ahk.exe /S /D=C:\AutoHotKey >>c:\\webpagetest\\wpt.bat"
     #log "Disable Screensaver"
 	#guest_control_exec "${1}" "cmd.exe" /c \
 	#	"echo REG ADD \\HKCU\\Control Panel\\Desktop\\ /v ScreenSaveActive /t REG_SZ /d 0 /f >>c:\webpagetest\wpt.bat" # TODO escapeing does not work properly
-		
-	
 	log "Using stable clock"
 	guest_control_exec "${1}" "cmd.exe" /c \
 		"echo bcdedit /set {default} useplatformclock true >>c:\\webpagetest\\wpt.bat"
-	
-	
+		
 	log "pre-install dummynet driver"
 	guest_control_exec "${1}" "cmd.exe" /c \
-	"echo copy c:\webpagetest\agent\dummynet\32bit  c:\webpagetest\agent\dummynet >>c:\\webpagetest\\wpt.bat"
+		"echo copy c:\webpagetest\agent\dummynet\64bit\*.*  c:\webpagetest\agent\dummynet >>c:\\webpagetest\\wpt.bat"
 	
 	log "clean disk content"
 	guest_control_exec "${1}" "cmd.exe" /c \
-	"echo cleanmgr.exe /d C /sagerun:11 >>c:\\webpagetest\\wpt.bat"
+		"echo cleanmgr.exe /d C /sagerun:11 >>c:\\webpagetest\\wpt.bat"
 	
 	log "optimize disk space"
 	guest_control_exec "${1}" "cmd.exe" /c \
-	"echo c:\webpagetest\sdelete.exe -z c: >>c:\\webpagetest\\wpt.bat"
+		"echo c:\webpagetest\sdelete.exe -z c: >>c:\\webpagetest\\wpt.bat"
 	
 	log "copy configuration"
 	guest_control_exec "${1}" "cmd.exe" /c \
@@ -507,7 +517,7 @@ EOF
 	#guest_control_exec "${1}" "cmd.exe" /c \
 	#"echo slmgr -ato >>c:\\webpagetest\\wpt.bat"
 	guest_control_exec "${1}" "cmd.exe" /c \
-		"echo start /wait c:\webpagetest\startup.bat >>c:\\webpagetest\\wpt.bat"
+		"echo start c:\webpagetest\startup.bat >>c:\\webpagetest\\wpt.bat"
 	guest_control_exec "${1}" "cmd.exe" /c \
 		"echo start /wait schtasks /create /tn wptdriver /tr c:\webpagetest\agent\wptdriver.exe /sc onlogon  >>c:\\webpagetest\\wpt.bat"
 
@@ -528,74 +538,75 @@ EOF
 			"c:\\webpagetest\\wpt.bat"
 		log 'netipfw.install.xp'
 		guest_control_exec "${1}" "cmd.exe" /c \
-			"c:\\webpagetest\\certutil –addstore –f TrustedPublisher c:\\webpagetest\\WPOFoundation.cer "
+			"c:\\webpagetest\\certutil â€“addstore â€“f TrustedPublisher c:\\webpagetest\\WPOFoundation.cer "
 		guest_control_exec "${1}" "cmd.exe" /c \
 			"c:\\webpagetest\\mindinst.exe c:\\webpagetest\\agent\\dummynet\\32bit\\netipfw.inf -i -s "
 
 	else
+		log "on correct directory"
 		guest_control_exec "${1}" "cmd.exe" /c \
-			"echo start /wait Certutil –addstore –f TrustedPublisher c:\\webpagetest\\WPOFoundation.cer >>c:\\webpagetest\\wpt.bat"
+			"cd /windows/system32/"
+		log "Disable LUA"
 		guest_control_exec "${1}" "cmd.exe" /c \
-			"echo start /wait c:\\webpagetest\\mindinst.exe c:\\webpagetest\\agent\\dummynet\\32bit\\netipfw.inf -i -s >>c:\\webpagetest\\wpt.bat"
+                "echo start /wait %windir%\System32\reg.exe ADD HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System /v EnableLUA /t REG_DWORD /d 0 /f >>c:\webpagetest\wpt.bat"
+                log "Disable driver installation integrity checks"
+                guest_control_exec "${1}" "cmd.exe" /c \
+                        "bcdedit.exe -set nointegritychecks ON >>c:\\webpagetest\\wpt.bat"
+                guest_control_exec "${1}" "cmd.exe" /c \
+                        "bcdedit.exe -set TESTSIGNING ON >>c:\\webpagetest\\wpt.bat"
+                guest_control_exec "${1}" "cmd.exe" /c \
+                        "bcdedit /set {default} bootstatuspolicy ignoreallfailures >>c:\\webpagetest\\wpt.bat"
+                guest_control_exec "${1}" "cmd.exe" /c \
+			"copy c:\webpagetest\wpt.bat C:\Users\\${guest_user}\\ievms.bat"
+                guest_control_exec "${1}" "schtasks.exe" /run /tn ievms
+
+		guest_control_exec "${1}" "cmd.exe" /c \
+			"echo start Certutil â€“addstore â€“f TrustedPublisher c:\\webpagetest\\WPOFoundation.cer >>c:\\webpagetest\\wpt.bat"
+		guest_control_exec "${1}" "cmd.exe" /c \
+			"echo start  c:\\webpagetest\\mindinst.exe c:\\webpagetest\\agent\\dummynet\\netipfw.inf -i -s >>c:\\webpagetest\\wpt.bat"
 		guest_control_exec "${1}" "cmd.exe" /c \
 			"copy c:\webpagetest\wpt.bat C:\Users\\${guest_user}\\ievms.bat"
 		guest_control_exec "${1}" "schtasks.exe" /run /tn ievms
-		log "Disable LUA"
-		guest_control_exec "${1}" "cmd.exe" /c \
-		"echo start /wait %windir%\System32\reg.exe ADD HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System /v EnableLUA /t REG_DWORD /d 0 /f >>c:\webpagetest\wpt.bat"
-		log "Disable driver installation integrity checks"
-		guest_control_exec "${1}" "cmd.exe" /c \
-			"echo start /wait bcdedit.exe -set loadoptions DDISABLE_INTEGRITY_CHECKS >>c:\\webpagetest\\wpt.bat"
-		guest_control_exec "${1}" "cmd.exe" /c \
-			"echo start /wait bcdedit.exe -set TESTSIGNING ON >>c:\\webpagetest\\wpt.bat"
-		guest_control_exec "${1}" "cmd.exe" /c \
-			"echo start /wait bcdedit /set {default} bootstatuspolicy ignoreallfailures >>c:\\webpagetest\\wpt.bat"
-		guest_control_exec "${1}" "cmd.exe" /c \
-			"copy c:\webpagetest\wpt.bat C:\Users\\${guest_user}\\ievms.bat"
-			guest_control_exec "${1}" "schtasks.exe" /run /tn ievms
 	fi
 	
 	# powersavings autoit script tbd
 	# firewall autoit script tbd
 	
 	
-	if [ "${os}" == "WinServer" ]
+	if [ "${3}" == "Win2k8" ]
 	then
 		log "Disable IE ESC"
-		VBoxManage guestcontrol "${1}" exec --image "reg.exe" --username \
-			Administrator --password "${guest_pass}" --wait-exit -- add \
+		VBoxManage guestcontrol "${1}" run  "reg.exe" --username \
+			Administrator --password "${guest_pass}"  -- add \
 			"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Active Setup\Installed Components\{A509B1A7-37EF-4b3f-8CFC-4F3A74704073}" \
-			/v “IsInstalled” /t REG_DWORD /d 0 /f
-		VBoxManage guestcontrol "${1}" exec --image "reg.exe" --username \
-			Administrator --password "${guest_pass}" --wait-exit -- add \
+			/v â€œIsInstalledâ€ /t REG_DWORD /d 0 /f
+		VBoxManage guestcontrol "${1}" run  "reg.exe" --username \
+			Administrator --password "${guest_pass}"  -- add \
 			"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Active Setup\Installed Components\{A509B1A8-37EF-4b3f-8CFC-4F3A74704073}" \
-			/v “IsInstalled” /t REG_DWORD /d 0 /f
+			/v â€œIsInstalledâ€ /t REG_DWORD /d 0 /f
 		guest_control_exec "${1}" "cmd.exe" /c \
 			"Rundll32 iesetup.dll,IEHardenUser"
 		guest_control_exec "${1}" "cmd.exe" /c \
 			"Rundll32 iesetup.dll,IEHardenAdmin"
 		guest_control_exec "${1}" "cmd.exe" /c \
 			"Rundll32 iesetup.dll,IEHardenMachineNow"
-		VBoxManage guestcontrol "${1}" exec --image "reg.exe" --username \
-			Administrator --password "${guest_pass}" --wait-exit -- add \
+		VBoxManage guestcontrol "${1}" run  "reg.exe" --username \
+			Administrator --password "${guest_pass}"  -- add \
 			"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Setup\OC Manager\Subcomponents" \
-			/v “iehardenadmin” /t REG_DWORD /d 0 /f
-		VBoxManage guestcontrol "${1}" exec --image "reg.exe" --username \
-			Administrator --password "${guest_pass}" --wait-exit -- add \
+			/v â€œiehardenadminâ€ /t REG_DWORD /d 0 /f
+		VBoxManage guestcontrol "${1}" run  "reg.exe" --username \
+			Administrator --password "${guest_pass}"  -- add \
 			"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Setup\OC Manager\Subcomponents" \
-			/v “iehardenuser” /t REG_DWORD /d 0 /f
-		VBoxManage guestcontrol "${1}" exec --image "reg.exe" --username \
-			Administrator --password "${guest_pass}" --wait-exit -- delete \
+			/v â€œiehardenuserâ€ /t REG_DWORD /d 0 /f
+		VBoxManage guestcontrol "${1}" run "reg.exe" --username \
+			Administrator --password "${guest_pass}"  -- delete \
 			"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Active Setup\Installed Components\{A509B1A7-37EF-4b3f-8CFC-4F3A74704073}" \
 			/f /va
-		VBoxManage guestcontrol "${1}" exec --image "reg.exe" --username \
-			Administrator --password "${guest_pass}" --wait-exit -- delete \
+		VBoxManage guestcontrol "${1}" run  "reg.exe" --username \
+			Administrator --password "${guest_pass}"  -- delete \
 			"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Active Setup\Installed Components\{A509B1A8-37EF-4b3f-8CFC-4F3A74704073}" \
 			/f /va
 	fi
-
-
-	
 }
 
 # Install an alternative version of IE in an XP virtual machine. Downloads the
@@ -631,6 +642,31 @@ install_ie_win7() { # vm url md5
         "echo shutdown.exe /s /f /t 0 >>C:\\Users\\${guest_user}\\ievms.bat"
     guest_control_exec "${1}" "schtasks.exe" /run /tn ievms
 
+    wait_for_guestcontrol "${1}"
+}
+
+
+# Install an alternative version of IE in a Win2k8 virtual machine. Downloads the
+# installer, copies it to the vm, then runs it before shutting down.
+install_ie_win2k8() { # vm url md5
+    local src=`basename "${2}"`
+    local dest="C:\\Users\\${guest_user}\\Desktop\\${src}"
+
+    download "${src}" "${2}" "${src}" "${3}"
+    start_vm "${1}"
+    wait_for_guestcontrol "${1}"
+    copy_to_vm "${1}" "${src}" "${dest}"
+
+    log "Installing IE"
+    guest_control_exec "${1}" "cmd.exe" /c \
+        "echo ${dest} /passive /norestart >C:\\Users\\${guest_user}\\ievms.bat"
+    guest_control_exec "${1}" "cmd.exe" /c \
+        "echo shutdown.exe /s /f /t 0 >>C:\\Users\\${guest_user}\\ievms.bat"
+    guest_control_exec "${1}" "schtasks.exe" /run /tn ievms
+
+    wait_for_guestcontrol "${1}"
+
+    guest_control_exec "${1}" "shutdown.exe" /s /f /t 0
     wait_for_shutdown "${1}"
 }
 
@@ -656,15 +692,25 @@ build_ievm() {
         9) os="Win7" ;;
         10|11)
             if [ "${reuse_win7}" != "yes" ]
-            then
-                if [ "$1" == "11" ]; then fail "IE11 is only available if REUSE_WIN7 is set"; fi
-                os="Win8"
-            else
+            then if [ "$1" == "11" ]; then fail "IE11 is only available if REUSE_WIN7 is set"; fi
+                os="Win2k8"
+ 	else
                 os="Win7"
                 archive="IE9_Win7.zip"
             fi
-            ;;
-        EDGE)
+	    ;;
+	    
+	9) os="Win2k8" ;;
+	10|11)
+	     if [ "${reuse_win2k8}" != "yes" ]
+		then if [ "$1" == "11" ]; then fail "IE11 is only avaiblable if REUSE_WIN2K8 is set"; fi
+                   os="Win8"
+	else
+		  os="Win2k8"
+		  archive="IE9_Win2k8.zip"
+	     fi
+	     ;;
+	EDGE)
             prefix="MS"
             version="Edge"
             os="Win10"
@@ -691,9 +737,12 @@ build_ievm() {
     case $archive in
         IE6_WinXP.zip) md5="3d5b7d980296d048de008d28305ca224" ;;
         IE7_Vista.zip) md5="d5269b2220f5c7fb9786dad513f2c05a" ;;
-        IE8_Win7.zip) md5="21b0aad3d66dac7f88635aa2318a3a55" ;;
+        #IE8_Win2k8.zip) md5="9e491948286ed3015f695cb49c939776" ;;
+	IE8_Win7.zip) md5="21b0aad3d66dac7f88635aa2318a3a55" ;;
         IE9_Win7.zip) md5="58d201fe7dc7e890ad645412264f2a2c" ;;
-        IE10_Win8.zip) md5="cc4e2f4b195e1b1e24e2ce6c7a6f149c" ;;
+        IE9_Win2k8.zip) md5="a69086febf216cb8452495f1aeb64d5e" ;;
+	IE10_Win2k8.zip) md5="8c8620cb1ee4c4ce17f6f2d95d5fff56" ;;
+	IE10_Win8.zip) md5="cc4e2f4b195e1b1e24e2ce6c7a6f149c" ;;
         MSEdge_Win10.zip) md5="c1011b491d49539975fb4c3eeff16dae" ;;
     esac
     
@@ -722,10 +771,20 @@ build_ievm() {
 
         log "Tagging VM with ievms version"
         VBoxManage setextradata "${vm}" "ievms" "{\"version\":\"${ievms_version}\"}"
-        
+
         log "Creating clean snapshot"
         VBoxManage snapshot "${vm}" take clean --description "The initial VM state"
-    fi
+	sleep 200
+
+# Shutdown the Vm to finish installation
+
+        log "Shutting down vm"
+        guest_control_exec "${vm}" "shutdown.exe" /s /f /t 0
+        wait_for_shutdown "${vm}"
+
+        log "restart the vm "
+        start_vm "${vm}"
+fi
 }
 
 # Build the IE6 virtual machine.
@@ -752,41 +811,54 @@ build_ievm_ie8() {
     if [ "${reuse_xp}" != "yes" ]
     then
         boot_auto_ga "IE8 - Win7"
-		install_wpt_agent "IE8 - Win7" "${WPT_FILENAME}" "${os}"
-    else
+                install_wpt_agent "IE8 - Win7" "${WPT_FILENAME}" "${os}"
+else
         set_xp_password "IE8 - WinXP"
 		install_wpt_agent "IE8 - WinXP" "${WPT_FILENAME}" "${os}"
         install_ie_xp "IE8 - WinXP" "http://download.microsoft.com/download/C/C/0/CC0BD555-33DD-411E-936B-73AC6F95AE11/IE8-WindowsXP-x86-ENU.exe" "616c2e8b12aaa349cd3acb38bf581700"
     fi
 }
 
-# Build the IE9 virtual machine.
+# Build the IE9 virtual machine 
 build_ievm_ie9() {
-    boot_auto_ga "IE9 - Win7"
+	if [ "${reuse_win7}" != "yes" ]
+   then
+	boot_auto_ga "IE9 - Win2k8"
+	install_wpt_agent "IE9 - Win2k8" "${WPT_FILENAME}" "${os}"
+
+   else
+	boot_auto_ga "IE9 - Win7"
 	install_wpt_agent "IE9 - Win7" "${WPT_FILENAME}" "${os}"
+   fi
 }
 
-# Build the IE10 virtual machine, reusing the Win7 VM if requested (the default).
+# Build the IE10 virtual machine, reusing the Win2k8 VM or Win7 image
 build_ievm_ie10() {
     if [ "${reuse_win7}" != "yes" ]
     then
-        boot_auto_ga "IE10 - Win8"
-		install_wpt_agent "IE10 - Win8" "${WPT_FILENAME}" "${os}"
-    else
+        boot_auto_ga "IE10 - Win2k8"
+	install_wpt_agent "IE10 - Win2k8" "${WPT_FILENAME}" "${os}"
+	install_ie_win2k8  "IE10 - Win2k8" "http://download.microsoft.com/download/C/E/0/CE0AB8AE-E6B7-43F7-9290-F8EB0EA54FB5/IE10-Windows6.1-x64-en-us.exe" "7ca1f1f4ab4e9599e2fa79d2684562da"
+    else 
         boot_auto_ga "IE10 - Win7"
 		install_wpt_agent "IE10 - Win7" "${WPT_FILENAME}" "${os}"
         install_ie_win7 "IE10 - Win7" "http://download.microsoft.com/download/8/A/C/8AC7C482-BC74-492E-B978-7ED04900CEDE/IE10-Windows6.1-x86-en-us.exe" "0f14b2de0b3cef611b9c1424049e996b"
     fi
 }
 
-# Build the IE11 virtual machine, reusing the Win7 VM always.
+# Build the IE11 virtual machine, reusing Win2k8 or Win7 image 
 build_ievm_ie11() {
-    boot_auto_ga "IE11 - Win7"
+    if [ "${reuse_win7}" != "yes" ]
+    then
+	boot_auto_ga "IE11 - Win2k8"
+	install_wpt_agent "IE11 -Win2k8" "${WPT_FILENAME}" "${os}"
+	install_ie_win2k8 "IE11 - Win2k8" "https://download.microsoft.com/download/7/1/7/7179A150-F2D2-4502-9D70-4B59EA148EAA/IE11-Windows6.1-x64-en-us.exe" "839a1a4d5043d694cd324c33937e00ae"
+    else
+    	boot_auto_ga "IE11 - Win7"
 	install_wpt_agent "IE11 - Win7" "${WPT_FILENAME}" "${os}"
-    install_ie_win7 "IE11 - Win7" "http://download.microsoft.com/download/9/2/F/92FC119C-3BCD-476C-B425-038A39625558/IE11-Windows6.1-x86-en-us.exe" "7d3479b9007f3c0670940c1b10a3615f"
+        install_ie_win7 "IE11 - Win7" "http://download.microsoft.com/download/9/2/F/92FC119C-3BCD-476C-B425-038A39625558/IE11-Windows6.1-x86-en-us.exe" "7d3479b9007f3c0670940c1b10a3615f"
+    fi
 }
-
-
 
 ## ## Main Entry Point
 #
@@ -807,15 +879,17 @@ check_unar
 ## Install each requested virtual machine sequentially.
 #all_versions="6 7 8 9 10 11 EDGE" IE6 et 7 will not work w/wptdriver ; urlblast only
 all_versions="8 9 10 11"
-IEVMS_VERSIONS="8"
+IEVMS_VERSIONS="9"
 for ver in ${IEVMS_VERSIONS:-$all_versions}
 do
 	### wpt
 	init_wpt_agent "IEVM_IE${ver}" "2.18" "c92c2257a9a3efe265b52876bd0417bb" "perfs.digitas.fr" # "" $1 IEVM(_IE8)|"" $2 2.14|"" $3 dda3a3a92924a99a752dea12dd5db470|"" $4 WPT_SERVER_URL
     log "Building IE ${ver} VM"
     build_ievm $ver
+
 	
 done
+    
 
 # We made it!
 log "Done!"
