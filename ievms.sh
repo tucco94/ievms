@@ -538,7 +538,7 @@ fi
 			"c:\\webpagetest\\wpt.bat"
 		log 'netipfw.install.xp'
 		guest_control_exec "${1}" "cmd.exe" /c \
-			"c:\\webpagetest\\certutil â€“addstore â€“f TrustedPublisher c:\\webpagetest\\WPOFoundation.cer "
+			"c:\\webpagetest\\certutil –addstore –f TrustedPublisher c:\\webpagetest\\WPOFoundation.cer "
 		guest_control_exec "${1}" "cmd.exe" /c \
 			"c:\\webpagetest\\mindinst.exe c:\\webpagetest\\agent\\dummynet\\32bit\\netipfw.inf -i -s "
 
@@ -557,11 +557,11 @@ fi
                 guest_control_exec "${1}" "cmd.exe" /c \
                         "bcdedit /set {default} bootstatuspolicy ignoreallfailures >>c:\\webpagetest\\wpt.bat"
                 guest_control_exec "${1}" "cmd.exe" /c \
-			"copy c:\webpagetest\wpt.bat C:\Users\\${guest_user}\\ievms.bat"
+			             "copy c:\webpagetest\wpt.bat C:\Users\\${guest_user}\\ievms.bat"
                 guest_control_exec "${1}" "schtasks.exe" /run /tn ievms
 
 		guest_control_exec "${1}" "cmd.exe" /c \
-			"echo start Certutil â€“addstore â€“f TrustedPublisher c:\\webpagetest\\WPOFoundation.cer >>c:\\webpagetest\\wpt.bat"
+			"echo start Certutil –addstore –f TrustedPublisher c:\\webpagetest\\WPOFoundation.cer >>c:\\webpagetest\\wpt.bat"
 		guest_control_exec "${1}" "cmd.exe" /c \
 			"echo start  c:\\webpagetest\\mindinst.exe c:\\webpagetest\\agent\\dummynet\\netipfw.inf -i -s >>c:\\webpagetest\\wpt.bat"
 		guest_control_exec "${1}" "cmd.exe" /c \
@@ -579,11 +579,11 @@ fi
 		VBoxManage guestcontrol "${1}" run  "reg.exe" --username \
 			Administrator --password "${guest_pass}"  -- add \
 			"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Active Setup\Installed Components\{A509B1A7-37EF-4b3f-8CFC-4F3A74704073}" \
-			/v â€œIsInstalledâ€ /t REG_DWORD /d 0 /f
+			/v “IsInstalled” /t REG_DWORD /d 0 /f
 		VBoxManage guestcontrol "${1}" run  "reg.exe" --username \
 			Administrator --password "${guest_pass}"  -- add \
 			"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Active Setup\Installed Components\{A509B1A8-37EF-4b3f-8CFC-4F3A74704073}" \
-			/v â€œIsInstalledâ€ /t REG_DWORD /d 0 /f
+			/v “IsInstalled” /t REG_DWORD /d 0 /f
 		guest_control_exec "${1}" "cmd.exe" /c \
 			"Rundll32 iesetup.dll,IEHardenUser"
 		guest_control_exec "${1}" "cmd.exe" /c \
@@ -593,11 +593,11 @@ fi
 		VBoxManage guestcontrol "${1}" run  "reg.exe" --username \
 			Administrator --password "${guest_pass}"  -- add \
 			"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Setup\OC Manager\Subcomponents" \
-			/v â€œiehardenadminâ€ /t REG_DWORD /d 0 /f
+			/v “iehardenadmin” /t REG_DWORD /d 0 /f
 		VBoxManage guestcontrol "${1}" run  "reg.exe" --username \
 			Administrator --password "${guest_pass}"  -- add \
 			"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Setup\OC Manager\Subcomponents" \
-			/v â€œiehardenuserâ€ /t REG_DWORD /d 0 /f
+			/v “iehardenuser” /t REG_DWORD /d 0 /f
 		VBoxManage guestcontrol "${1}" run "reg.exe" --username \
 			Administrator --password "${guest_pass}"  -- delete \
 			"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Active Setup\Installed Components\{A509B1A7-37EF-4b3f-8CFC-4F3A74704073}" \
