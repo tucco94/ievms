@@ -720,22 +720,6 @@ build_ievm() {
 			archive="IE8_Win7.zip"
 	         fi
 	         ;;
-
-
-
-
-#	case $1 in
-#	8|9|10|11)
-#		os="Win2k8" ;;
-#		if [ "${reuse_win2k8}" != "yes" }
-#			then
-#			os="Win7"
-#			archive="IE8_Win7.zip"
-#		else
-#			os="Win2k8"
-#			archive="IE8_Win2k8.zip"
-#		fi
-#		;;
 	   EDGE)
             prefix="MS"
             version="Edge"
@@ -836,13 +820,7 @@ else
     	boot_auto_ga "IE8 - Win7"
         install_wpt_agent "IE8 - Win7" "${WPT_FILENAME}" "${os}"
 
-#else   os="WinXP"
-#	set_xp_password "IE8 - WinXP"
-#        install_wpt_agent "IE8 - WinXP" "${WPT_FILENAME}" "${os}"
-#        install_ie_xp "IE8 - WinXP" "http://download.microsoft.com/download/C/C/0/CC0BD555-33DD-411E-936B-73AC6F95AE11/IE8-WindowsXP-x86-ENU.exe" "616c2e8b12aaa349cd3acb38bf581700"
-
-
-   fi
+    fi
 }
 
 # Build the IE9 virtual machine 
