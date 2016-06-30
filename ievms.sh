@@ -57,7 +57,7 @@ check_md5() {
 
     if [ "${md5}" != "${2}" ]
     then
-        log "MD5 check failed for ${1} (wanted ${2}, got ${md5})"
+ul        log "MD5 check failed for ${1} (wanted ${2}, got ${md5})"
         return 1
     fi
 
@@ -451,18 +451,17 @@ fi
 	copy_to_vm "${1}" "startup.bat" "${dest}\startup.bat"
 	#copy_to_vm "${1}" "ahk.exe" "${dest}\ahk.exe"
 	log "copying configuration"
-	sed -e "s/url=.*/url=http:\/\/${WPT_SERVER_URL}\//" -e "s/location=.*/location=${WPT_SERVER_LOCATION}_WPT/" -e "s/IE/IE_${ver}/" wptdriver.ini.sample > wptdriver.ini
+	sed -e "s/url=.*/url=http:\/\/${WPT_SERVER_URL}\//" -e "s/location=.*/location=${WPT_SERVER_LOCATION}_WPT/" -e "s/IE/IE_${ver}/" -e "s/installer=http:\/\/www.webpagetest.org\/installers\/browsers\/firefox.dat/;installer=http:\/\/www.webpagetest.org\/installer\/browser\/firefox.dat/" wptdriver.ini.sample|unix2dos > wptdriver.ini
+	sed -i '25d' wptdriver.ini
+        sed -i "s/Files/Files (x86)/" wptdriver.ini
+        echo 'exe="C:\Program Files\Internet Explorer\iexplore.exe"' >>  wptdriver.ini
 	copy_to_vm "${1}" "wptdriver.ini" "${dest}\wptdriver.ini"
-	sed -e "s/Url=.*/Url=http:\/\/${WPT_SERVER_URL}\/work/" -e "s/Location=.*/location=${WPT_SERVER_LOCATION}_IE/" -e "s/IE/IE_${ver}/" urlBlast.ini.sample > urlBlast.ini
+	sed -e "s/Url=.*/Url=http:\/\/${WPT_SERVER_URL}\/work/" -e "s/Location=.*/location=${WPT_SERVER_LOCATION}_IE/" -e "s/IE/IE_${ver}/" urlBlast.ini.sample|unix2dos > urlBlast.ini
 	copy_to_vm "${1}" "urlBlast.ini" "${dest}\urlBlast.ini"
-	
 
-	
 	log "will echo"
 	guest_control_exec "${1}" "cmd.exe" /c \
 		"echo @ECHO ON >>c:\\webpagetest\\wpt.bat"
-	
-
 	log "Installing 7z"
 	guest_control_exec "${1}" "cmd.exe" /c \
 		"echo start /wait msiexec /i C:\webpagetest\7z.msi /quiet /q INSTALLDIR=C:\7zip >>c:\\webpagetest\\wpt.bat"
@@ -494,19 +493,19 @@ fi
 	log "Using stable clock"
 	guest_control_exec "${1}" "cmd.exe" /c \
 		"echo bcdedit /set {default} useplatformclock true >>c:\\webpagetest\\wpt.bat"
-		
+
 	log "pre-install dummynet driver"
 	guest_control_exec "${1}" "cmd.exe" /c \
 		"echo copy c:\webpagetest\agent\dummynet\64bit\*.*  c:\webpagetest\agent\dummynet >>c:\\webpagetest\\wpt.bat"
-	
+
 	log "clean disk content"
 	guest_control_exec "${1}" "cmd.exe" /c \
 		"echo cleanmgr.exe /d C /sagerun:11 >>c:\\webpagetest\\wpt.bat"
-	
+
 	log "optimize disk space"
 	guest_control_exec "${1}" "cmd.exe" /c \
 		"echo c:\webpagetest\sdelete.exe -z c: >>c:\\webpagetest\\wpt.bat"
-	
+
 	log "copy configuration"
 	guest_control_exec "${1}" "cmd.exe" /c \
 	"echo copy c:\webpagetest\wptdriver.ini  c:\webpagetest\agent\ >>c:\\webpagetest\\wpt.bat"
@@ -530,7 +529,7 @@ fi
 	#	"echo REG ADD \\HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon\\ /f /v AutoAdminLogon /t REG_SZ /d 1 >>c:\webpagetest\wpt.bat" # todo: escapeing does not work properly
 		echo "NOT XP"
 	fi
-	
+
 
 	if [ "${3}" == "WinXP" ]
 	then
@@ -571,11 +570,10 @@ fi
         	wait_for_shutdown "${1}"
 
 	fi
-	
+
 	# powersavings autoit script tbd
 	# firewall autoit script tbd
-	
-	
+
 	if [ "${3}" == "Win2k8" ]
 	then
 		log "Disable IE ESC"
@@ -614,7 +612,7 @@ fi
                 "echo start /wait %windir%\System32\reg.exe ADD HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System /v EnableLUA /t REG_DWORD /d 0 /f >> c:\webpagetest\wpt.bat"
                 log "Disable driver installation integrity checks"
                 guest_control_exec "${1}" "cmd.exe" /c \
-                        "echo start /wait bcdedit /eet loadoptions DDISABLE_INTEGRITY_CHECKS  >>c:\\webpagetest\\wpt.bat"
+                        "echo start /wait bcdedit /set loadoptions DDISABLE_INTEGRITY_CHECKS  >>c:\\webpagetest\\wpt.bat"
                 guest_control_exec "${1}" "cmd.exe" /c \
                         "echo start /wait bcdedit.exe -set TESTSIGNING ON >>c:\\webpagetest\\wpt.bat"
                 guest_control_exec "${1}" "cmd.exe" /c \
@@ -684,6 +682,11 @@ install_ie_win2k8() { # vm url md5
     log "Installing IE"
     guest_control_exec "${1}" "cmd.exe" /c \
     "echo start /wait ${dest} /passive /norestart >C:\\Users\\${guest_user}\\ievms.bat"
+#test disable IE SI after install IE upgrade
+    guest_control_exec "${1}" "cmd.exe" /c \
+    "echo start /wait %windir%\System32\reg.exe ADD HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Active Setup\\Installed Components\\{A509B1A7-37EF-4b3f-8CFC-4F3A74704073}\\ /v "IsInstalled" /t REG_DWORD /d 0 /f >> C:\\Users\\${guest_user}\\ievms.bat"
+    guest_control_exec "${1}" "cmd.exe" /c \
+    "echo start /wait %windir%\System32\reg.exe ADD HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Active Setup\\Installed Components\\{A509B1A8-37EF-4b3f-8CFC-4F3A74704073}\\ /v "IsInstalled" /t REG_DWORD /d 0 /f  >>  C:\\Users\\${guest_user}\\ievms.bat"
     guest_control_exec "${1}" "cmd.exe" /c \
     "echo shutdown.exe /s /f /t 0 >>C:\\Users\\${guest_user}\\ievms.bat"
     guest_control_exec "${1}" "schtasks.exe" /run /tn ievms
@@ -708,7 +711,7 @@ build_ievm() {
                 unit="10"
             fi
             ;;
-	
+
 	8|9|10|11)
 		os="" 
 		if [ "${reuse_win7}" != "yes" ]
@@ -720,7 +723,7 @@ build_ievm() {
 			archive="IE8_Win7.zip"
 	         fi
 	         ;;
-	   EDGE)
+	EDGE)
             prefix="MS"
             version="Edge"
             os="Win10"
@@ -748,7 +751,7 @@ build_ievm() {
         IE6_WinXP.zip) md5="3d5b7d980296d048de008d28305ca224" ;;
         IE7_Vista.zip) md5="d5269b2220f5c7fb9786dad513f2c05a" ;;
 	IE8_Win7.zip) md5="21b0aad3d66dac7f88635aa2318a3a55" ;;
-        IE8_Win2k8.zip) md5="67b179985c7eba76b0766c3421d677de" ;;
+        IE8_Win2k8.zip) md5="f0196288d436e222391553befe4e496d" ;;
 	IE9_Win7.zip) md5="58d201fe7dc7e890ad645412264f2a2c" ;;
         IE9_Win2k8.zip) md5="4850fcb5b4674370e98a14e1bab39368" ;;
 	IE10_Win8.zip) md5="cc4e2f4b195e1b1e24e2ce6c7a6f149c" ;;
@@ -783,9 +786,9 @@ build_ievm() {
 
         log "Creating clean snapshot"
         VBoxManage snapshot "${vm}" take clean --description "The initial VM state"
-	
+
 # Start the Vm to finish installation
-	
+
          log "restart the vm "
          start_vm "${vm}"
 fi
@@ -820,7 +823,7 @@ else
     	boot_auto_ga "IE8 - Win7"
         install_wpt_agent "IE8 - Win7" "${WPT_FILENAME}" "${os}"
 
-    fi
+   fi
 }
 
 # Build the IE9 virtual machine 
@@ -862,8 +865,7 @@ build_ievm_ie11() {
 	boot_auto_ga "IE11 - Win2k8"
 	install_wpt_agent "IE11 - Win2k8" "${WPT_FILENAME}" "${os}"
 	install_ie_win2k8 "IE11 - Win2k8" "https://download.microsoft.com/download/7/1/7/7179A150-F2D2-4502-9D70-4B59EA148EAA/IE11-Windows6.1-x64-en-us.exe" "839a1a4d5043d694cd324c33937e00ae"
-
-   else 
+   else
     	boot_auto_ga "IE11 - Win7"
 	install_wpt_agent "IE11 - Win7" "${WPT_FILENAME}" "${os}"
 	install_ie_win7 "IE11 - Win7" "http://download.microsoft.com/download/9/2/F/92FC119C-3BCD-476C-B425-038A39625558/IE11-Windows6.1-x86-en-us.exe" "7d3479b9007f3c0670940c1b10a3615f"
@@ -877,6 +879,7 @@ build_ievm_ie11() {
 
 ## tests
 ver=8
+vmlocation=Moscow
 #install_wpt_agent "IE8 - WinXP" "${WPT_FILENAME}" "WinXP"
 #exit
 ## </tests>
@@ -894,7 +897,7 @@ IEVMS_VERSIONS="11"
 for ver in ${IEVMS_VERSIONS:-$all_versions}
 do
 	### wpt
-	init_wpt_agent "IEVM_IE${ver}" "2.18" "c92c2257a9a3efe265b52876bd0417bb" "perfs.digitas.fr" # "" $1 IEVM(_IE8)|"" $2 2.14|"" $3 dda3a3a92924a99a752dea12dd5db470|"" $4 WPT_SERVER_URL
+	init_wpt_agent "${vmlocation}" "2.18" "c92c2257a9a3efe265b52876bd0417bb" "perfs.digitas.fr" # "" $1 IEVM(_IE8)|"" $2 2.14|"" $3 dda3a3a92924a99a752dea12dd5db470|"" $4 WPT_SERVER_URL
     log "Building IE ${ver} VM"
     build_ievm $ver
 
