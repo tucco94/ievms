@@ -22,7 +22,7 @@ curl_opts=${CURL_OPTS:-""}
 reuse_xp=${REUSE_XP:-"no"}
 
 # Reuse Win7 virtual machines for IE versions that are supported.
-reuse_win7=${REUSE_WIN7:-"no"}
+reuse_win7=${REUSE_WIN7:-"yes"}
 
 # Reuse Win2k8 virtual machines for IE versions that are supported.
 #reuse_win2k8=${REUSE_WIN2K8:-"no"}
@@ -452,9 +452,12 @@ fi
 	#copy_to_vm "${1}" "ahk.exe" "${dest}\ahk.exe"
 	log "copying configuration"
 	sed -e "s/url=.*/url=http:\/\/${WPT_SERVER_URL}\//" -e "s/location=.*/location=${WPT_SERVER_LOCATION}_WPT/" -e "s/IE/IE_${ver}/" -e "s/installer=http:\/\/www.webpagetest.org\/installers\/browsers\/firefox.dat/;installer=http:\/\/www.webpagetest.org\/installer\/browser\/firefox.dat/" wptdriver.ini.sample|unix2dos > wptdriver.ini
+	if [ "${3}" == "Win2k8" ]
+	then
 	sed -i '25d' wptdriver.ini
         sed -i "s/Files/Files (x86)/" wptdriver.ini
         echo 'exe="C:\Program Files\Internet Explorer\iexplore.exe"' >>  wptdriver.ini
+	fi
 	copy_to_vm "${1}" "wptdriver.ini" "${dest}\wptdriver.ini"
 	sed -e "s/Url=.*/Url=http:\/\/${WPT_SERVER_URL}\/work/" -e "s/Location=.*/location=${WPT_SERVER_LOCATION}_IE/" -e "s/IE/IE_${ver}/" urlBlast.ini.sample|unix2dos > urlBlast.ini
 	copy_to_vm "${1}" "urlBlast.ini" "${dest}\urlBlast.ini"
