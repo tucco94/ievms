@@ -5,15 +5,13 @@ export PATH=$PATH:/usr/local/bin/
 # Caution is a virtue.
 set -o nounset
 set -o errtrace
-set -o errexit
-set -o pipefail
 set -x
 # ## Gobal Variables
+
 
 # The ievms version.
 ievms_version="0.3.1"
 
-WINDOWS_KEY="qqrg9-dmgcd-8v7jg-8d2kk-b6vyj"
 
 # Options passed to each `curl` command.
 curl_opts=${CURL_OPTS:-""}
@@ -57,7 +55,7 @@ check_md5() {
 
     if [ "${md5}" != "${2}" ]
     then
-ul        log "MD5 check failed for ${1} (wanted ${2}, got ${md5})"
+        log "MD5 check failed for ${1} (wanted ${2}, got ${md5})"
         return 1
     fi
 
@@ -319,7 +317,7 @@ init_wpt_agent(){ # $1 IEVM(_IE8)|Location $2 2.14|"" $3 dda3a3a92924a99a752dea1
  
 	if [ "$1" == "" ]
 		then
-			WPT_SERVER_LOCATION="IEVM"
+			WPT_SERVER_LOCATION="IEVM_${ver}"
 		else
 			WPT_SERVER_LOCATION="$1"
 	fi
@@ -461,96 +459,15 @@ fi
 	copy_to_vm "${1}" "wptdriver.ini" "${dest}\wptdriver.ini"
 	sed -e "s/Url=.*/Url=http:\/\/${WPT_SERVER_URL}\/work/" -e "s/Location=.*/location=${WPT_SERVER_LOCATION}_IE/" -e "s/IE/IE_${ver}/" urlBlast.ini.sample|unix2dos > urlBlast.ini
 	copy_to_vm "${1}" "urlBlast.ini" "${dest}\urlBlast.ini"
+	
 
+	
 	log "will echo"
 	guest_control_exec "${1}" "cmd.exe" /c \
-		"echo @ECHO ON >>c:\\webpagetest\\wpt.bat"
-	log "Installing 7z"
-	guest_control_exec "${1}" "cmd.exe" /c \
-		"echo start /wait msiexec /i C:\webpagetest\7z.msi /quiet /q INSTALLDIR=C:\7zip >>c:\\webpagetest\\wpt.bat"
-	log "Unzip wpt agent"
-	guest_control_exec "${1}" "cmd.exe" /c \
-		"echo start /wait c:\7zip\7z.exe x c:\webpagetest\webpagetest_${WPT_VERSION}.zip -y -oc:\webpagetest agent/* >>c:\\webpagetest\\wpt.bat"
-	log "Installing winpcap"
-	guest_control_exec "${1}" "cmd.exe" /c \
-		"echo start /wait c:\webpagetest\agent\winpcap-nmap-4.12.exe /S >> c:\\webpagetest\\wpt.bat"
-	log "Intalling AviSynth"
-	#guest_control_exec "${1}" "cmd.exe" /c \
-	#	"echo start /wait c:\webpagetest\agent\Avisynth_258.exe /S >>c:\\webpagetest\\wpt.bat"
-
-	log "Intalling Safari"
-	guest_control_exec "${1}" "cmd.exe" /c \
-		"echo start /wait c:\webpagetest\SafariSetup.exe /quiet >>c:\\webpagetest\\wpt.bat"
-	log "Intalling AutoIT"
-	guest_control_exec "${1}" "cmd.exe" /c \
-		"echo start /wait c:\webpagetest\autoit.exe /S /D=C:\AutoIT >>c:\\webpagetest\\wpt.bat"
-	log "Installing Cloudbase-init"
-	guest_control_exec "${1}" "cmd.exe" /c \
-		"echo start /wait msiexec /i c:\webpagetest\CloudbaseInitSetup.msi /qn /l*v log.cloudbase.txt >>c:\\webpagetest\\wpt.bat"
-	#log "Installing AHK"
-	#guest_control_exec "${1}" "cmd.exe" /c \
-	#	"echo start /wait c:\webpagetest\ahk.exe /S /D=C:\AutoHotKey >>c:\\webpagetest\\wpt.bat"
-    #log "Disable Screensaver"
-	#guest_control_exec "${1}" "cmd.exe" /c \
-	#	"echo REG ADD \\HKCU\\Control Panel\\Desktop\\ /v ScreenSaveActive /t REG_SZ /d 0 /f >>c:\webpagetest\wpt.bat" # TODO escapeing does not work properly
-	log "Using stable clock"
-	guest_control_exec "${1}" "cmd.exe" /c \
-		"echo bcdedit /set {default} useplatformclock true >>c:\\webpagetest\\wpt.bat"
-
-	log "pre-install dummynet driver"
-	guest_control_exec "${1}" "cmd.exe" /c \
-		"echo copy c:\webpagetest\agent\dummynet\64bit\*.*  c:\webpagetest\agent\dummynet >>c:\\webpagetest\\wpt.bat"
-
-	log "clean disk content"
-	guest_control_exec "${1}" "cmd.exe" /c \
-		"echo cleanmgr.exe /d C /sagerun:11 >>c:\\webpagetest\\wpt.bat"
-
-	log "optimize disk space"
-	guest_control_exec "${1}" "cmd.exe" /c \
-		"echo c:\webpagetest\sdelete.exe -z c: >>c:\\webpagetest\\wpt.bat"
-
-	log "copy configuration"
-	guest_control_exec "${1}" "cmd.exe" /c \
-	"echo copy c:\webpagetest\wptdriver.ini  c:\webpagetest\agent\ >>c:\\webpagetest\\wpt.bat"
-	guest_control_exec "${1}" "cmd.exe" /c \
-	"echo copy c:\webpagetest\urlBlast.ini  c:\webpagetest\agent\ >>c:\\webpagetest\\wpt.bat"
-	#guest_control_exec "${1}" "cmd.exe" /c \
-	#"echo slmgr -ipk ${WINDOWS_KEY} >>c:\\webpagetest\\wpt.bat"
-	#guest_control_exec "${1}" "cmd.exe" /c \
-	#"echo slmgr -ato >>c:\\webpagetest\\wpt.bat"
-	guest_control_exec "${1}" "cmd.exe" /c \
-		"echo start c:\webpagetest\startup.bat >>c:\\webpagetest\\wpt.bat"
-	guest_control_exec "${1}" "cmd.exe" /c \
-		"echo start /wait schtasks /create /tn wptdriver /tr c:\webpagetest\agent\wptdriver.exe /sc onlogon  >>c:\\webpagetest\\wpt.bat"
-
-	if [ "${3}" == "WinXP" ]
-	then
-		echo "XP"
-	else
-	#	log "Disable UAC"
-	#	guest_control_exec "${1}" "cmd.exe" /c \
-	#	"echo REG ADD \\HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon\\ /f /v AutoAdminLogon /t REG_SZ /d 1 >>c:\webpagetest\wpt.bat" # todo: escapeing does not work properly
-		echo "NOT XP"
-	fi
-
-
-	if [ "${3}" == "WinXP" ]
-	then
-		guest_control_exec "${1}" "cmd.exe" /c \
-			"c:\\webpagetest\\wpt.bat"
-		log 'netipfw.install.xp'
-		guest_control_exec "${1}" "cmd.exe" /c \
-			"c:\\webpagetest\\certutil –addstore –f TrustedPublisher c:\\webpagetest\\WPOFoundation.cer "
-		guest_control_exec "${1}" "cmd.exe" /c \
-			"c:\\webpagetest\\mindinst.exe c:\\webpagetest\\agent\\dummynet\\64bit\\netipfw.inf -i -s "
-		guest_control_exec "${1}" "cmd.exe" /c \
-        		"shutdown.exe /s /f /t 0"
-        	wait_for_guestcontrol "${1}"
-
-	elif [ "${3}" == "Win7" ]
+		"echo @ECHO ON >c:\\webpagetest\\wpt.bat"
+	
+	if [ "${3}" == "Win7" ]
 	then	log "on correct directory"
-		guest_control_exec "${1}" "cmd.exe" /c \
-			"cd /windows/system32/"
 		log "Disable LUA"
 		guest_control_exec "${1}" "cmd.exe" /c \
                 "echo start /wait %windir%\System32\reg.exe ADD HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System /v EnableLUA /t REG_DWORD /d 0 /f >>c:\webpagetest\wpt.bat"
@@ -564,8 +481,6 @@ fi
 		guest_control_exec "${1}" "cmd.exe" /c \
 			"echo start /wait Certutil –addstore –f TrustedPublisher c:\\webpagetest\\WPOFoundation.cer >>c:\\webpagetest\\wpt.bat"
 		guest_control_exec "${1}" "cmd.exe" /c \
-			"echo start /wait  c:\\webpagetest\\mindinst.exe c:\\webpagetest\\agent\\dummynet\\netipfw.inf -i -s >>c:\\webpagetest\\wpt.bat"
-		guest_control_exec "${1}" "cmd.exe" /c \
 			"echo shutdown.exe /s /f /t 0 >>C:\\webpagetest\\wpt.bat"
                 guest_control_exec "${1}" "cmd.exe" /c \
 			"copy c:\\webpagetest\\wpt.bat C:\Users\\${guest_user}\\ievms.bat"
@@ -573,8 +488,7 @@ fi
         	wait_for_shutdown "${1}"
 
 	fi
-
-	# powersavings autoit script tbd
+		# powersavings autoit script tbd
 	# firewall autoit script tbd
 
 	if [ "${3}" == "Win2k8" ]
@@ -600,6 +514,10 @@ fi
 			/v “iehardenadmin” /t REG_DWORD /d 0 /f
 		VBoxManage guestcontrol "${1}" run  "reg.exe" --username \
 			Administrator --password "${guest_pass}"  -- add \
+			"HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\Netlogon\Parameters" \
+			/v “DisablePasswordChange” /t REG_DWORD /d 1 /f
+		VBoxManage guestcontrol "${1}" run  "reg.exe" --username \
+			Administrator --password "${guest_pass}"  -- add \
 			"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Setup\OC Manager\Subcomponents" \
 			/v “iehardenuser” /t REG_DWORD /d 0 /f
 		VBoxManage guestcontrol "${1}" run "reg.exe" --username \
@@ -620,9 +538,7 @@ fi
                         "echo start /wait bcdedit.exe -set TESTSIGNING ON >>c:\\webpagetest\\wpt.bat"
                 guest_control_exec "${1}" "cmd.exe" /c \
                         "echo start /wait Certutil –addstore –f TrustedPublisher c:\\webpagetest\\WPOFoundation.cer >>c:\\webpagetest\\wpt.bat"
-                guest_control_exec "${1}" "cmd.exe" /c \
-                        "echo start /wait  c:\\webpagetest\\mindinst.exe c:\\webpagetest\\agent\\dummynet\\netipfw.inf -i -s >>c:\\webpagetest\\wpt.bat"
-                guest_control_exec "${1}" "cmd.exe" /c \
+		guest_control_exec "${1}" "cmd.exe" /c \
                         "echo shutdown.exe /s /f /t 0 >>C:\\webpagetest\\wpt.bat"
                 guest_control_exec "${1}" "cmd.exe" /c \
                         "copy c:\\webpagetest\\wpt.bat C:\Users\\${guest_user}\\ievms.bat"
@@ -630,6 +546,71 @@ fi
                 wait_for_shutdown "${1}"
 
 	fi
+	start_vm "${1}"
+	wait_for_guestcontrol "${1}"
+	log "Installing 7z"
+	guest_control_exec "${1}" "cmd.exe" /c \
+		"echo start /wait msiexec /i C:\webpagetest\7z.msi /quiet /q INSTALLDIR=C:\7zip >c:\\webpagetest\\wpt.bat"
+	log "Unzip wpt agent"
+	guest_control_exec "${1}" "cmd.exe" /c \
+		"echo start /wait c:\7zip\7z.exe x c:\webpagetest\webpagetest_${WPT_VERSION}.zip -y -oc:\webpagetest agent/* >>c:\\webpagetest\\wpt.bat"
+	log "Installing winpcap"
+	guest_control_exec "${1}" "cmd.exe" /c \
+		"echo start /wait c:\webpagetest\agent\winpcap-nmap-4.12.exe /S >> c:\\webpagetest\\wpt.bat"
+	log "Intalling AviSynth"
+	#guest_control_exec "${1}" "cmd.exe" /c \
+	#	"echo start /wait c:\webpagetest\agent\Avisynth_258.exe /S >>c:\\webpagetest\\wpt.bat"
+	log "pre-install dummynet driver"
+	guest_control_exec "${1}" "cmd.exe" /c \
+		"echo copy c:\webpagetest\agent\dummynet\64bit\*.*  c:\webpagetest\agent\dummynet >>c:\\webpagetest\\wpt.bat"
+	guest_control_exec "${1}" "cmd.exe" /c \
+		"echo start /wait  c:\\webpagetest\\mindinst.exe c:\\webpagetest\\agent\\dummynet\\netipfw.inf -i -s >>c:\\webpagetest\\wpt.bat"
+	log "Intalling Safari"
+	guest_control_exec "${1}" "cmd.exe" /c \
+		"echo start /wait c:\webpagetest\SafariSetup.exe /quiet >>c:\\webpagetest\\wpt.bat"
+	log "Intalling AutoIT"
+	guest_control_exec "${1}" "cmd.exe" /c \
+		"echo start /wait c:\webpagetest\autoit.exe /S /D=C:\AutoIT >>c:\\webpagetest\\wpt.bat"
+	log "Installing Cloudbase-init"
+	guest_control_exec "${1}" "cmd.exe" /c \
+		"echo start /wait msiexec /i c:\webpagetest\CloudbaseInitSetup.msi /qn /l*v log.cloudbase.txt >>c:\\webpagetest\\wpt.bat"
+	#log "Installing AHK"
+	#guest_control_exec "${1}" "cmd.exe" /c \
+	#	"echo start /wait c:\webpagetest\ahk.exe /S /D=C:\AutoHotKey >>c:\\webpagetest\\wpt.bat"
+    #log "Disable Screensaver"
+	#guest_control_exec "${1}" "cmd.exe" /c \
+	#	"echo REG ADD \\HKCU\\Control Panel\\Desktop\\ /v ScreenSaveActive /t REG_SZ /d 0 /f >>c:\webpagetest\wpt.bat" # TODO escapeing does not work properly
+	log "Using stable clock"
+	guest_control_exec "${1}" "cmd.exe" /c \
+		"echo bcdedit /set {default} useplatformclock true >>c:\\webpagetest\\wpt.bat"
+
+	log "clean disk content"
+	guest_control_exec "${1}" "cmd.exe" /c \
+		"echo cleanmgr.exe /d C /sagerun:11 >>c:\\webpagetest\\wpt.bat"
+
+	log "optimize disk space"
+	guest_control_exec "${1}" "cmd.exe" /c \
+		"echo c:\webpagetest\sdelete.exe -z c: >>c:\\webpagetest\\wpt.bat"
+
+	log "copy configuration"
+	guest_control_exec "${1}" "cmd.exe" /c \
+	"echo copy c:\webpagetest\wptdriver.ini  c:\webpagetest\agent\ >>c:\\webpagetest\\wpt.bat"
+	guest_control_exec "${1}" "cmd.exe" /c \
+	"echo copy c:\webpagetest\urlBlast.ini  c:\webpagetest\agent\ >>c:\\webpagetest\\wpt.bat"
+	#guest_control_exec "${1}" "cmd.exe" /c \
+	#"echo slmgr -ipk ${WINDOWS_KEY} >>c:\\webpagetest\\wpt.bat"
+	#guest_control_exec "${1}" "cmd.exe" /c \
+	#"echo slmgr -ato >>c:\\webpagetest\\wpt.bat"
+	guest_control_exec "${1}" "cmd.exe" /c \
+		"echo start c:\webpagetest\startup.bat >>c:\\webpagetest\\wpt.bat"
+	guest_control_exec "${1}" "cmd.exe" /c \
+		"echo start /wait schtasks /create /tn wptdriver /tr c:\webpagetest\agent\wptdriver.exe /sc onlogon  >>c:\\webpagetest\\wpt.bat"
+	guest_control_exec "${1}" "cmd.exe" /c \
+		"echo shutdown.exe /s /f /t 0 >>C:\\webpagetest\\wpt.bat"
+	guest_control_exec "${1}" "cmd.exe" /c \
+                        "copy c:\\webpagetest\\wpt.bat C:\Users\\${guest_user}\\ievms.bat"
+        guest_control_exec "${1}" "schtasks.exe" /run /tn ievms
+	wait_for_shutdown "${1}"
 
 }
 
@@ -661,6 +642,7 @@ install_ie_win7() { # vm url md5
     start_vm "${1}"
     wait_for_guestcontrol "${1}"
     copy_to_vm "${1}" "${src}" "${dest}"
+
     log "Installing IE"
     guest_control_exec "${1}" "cmd.exe" /c \
     "echo start /wait ${dest} /passive /norestart >C:\\Users\\${guest_user}\\ievms.bat"
@@ -682,6 +664,7 @@ install_ie_win2k8() { # vm url md5
     start_vm "${1}"
     wait_for_guestcontrol "${1}"
     copy_to_vm "${1}" "${src}" "${dest}"
+
     log "Installing IE"
     guest_control_exec "${1}" "cmd.exe" /c \
     "echo start /wait ${dest} /passive /norestart >C:\\Users\\${guest_user}\\ievms.bat"
@@ -709,6 +692,7 @@ build_ievm() {
             then
                 if [ "$1" == "6" ]; then unit="10"; fi
                 if [ "$1" == "7" ]; then os="Vista"; fi
+                if [ "$1" == "8" ]; then os="Win7"; fi
             else
                 archive="IE6_WinXP.zip"
                 unit="10"
@@ -753,6 +737,7 @@ build_ievm() {
     case $archive in
         IE6_WinXP.zip) md5="3d5b7d980296d048de008d28305ca224" ;;
         IE7_Vista.zip) md5="d5269b2220f5c7fb9786dad513f2c05a" ;;
+        #IE8_Win2k8.zip) md5="9e491948286ed3015f695cb49c939776" ;;
 	IE8_Win7.zip) md5="21b0aad3d66dac7f88635aa2318a3a55" ;;
         IE8_Win2k8.zip) md5="f0196288d436e222391553befe4e496d" ;;
 	IE9_Win7.zip) md5="58d201fe7dc7e890ad645412264f2a2c" ;;
@@ -881,8 +866,8 @@ build_ievm_ie11() {
 
 
 ## tests
-ver=8
-vmlocation=Moscow
+#ver=8
+#vmlocation=Moscow
 #install_wpt_agent "IE8 - WinXP" "${WPT_FILENAME}" "WinXP"
 #exit
 ## </tests>
@@ -896,11 +881,10 @@ check_unar
 ## Install each requested virtual machine sequentially.
 #all_versions="6 7 8 9 10 11 EDGE" IE6 et 7 will not work w/wptdriver ; urlblast only
 all_versions="8 9 10 11"
-IEVMS_VERSIONS="11"
 for ver in ${IEVMS_VERSIONS:-$all_versions}
 do
-	### wpt
-	init_wpt_agent "${vmlocation}" "2.18" "c92c2257a9a3efe265b52876bd0417bb" "perfs.digitas.fr" # "" $1 IEVM(_IE8)|"" $2 2.14|"" $3 dda3a3a92924a99a752dea12dd5db470|"" $4 WPT_SERVER_URL
+    ### wpt
+    init_wpt_agent "${WPT_SERVER_LOCATION:-}" "${WPT_VERSION:-}" "${WPT_MD5:-}" "${WPT_SERVER_URL:-}" # "" $1 IEVM(_IE8)|"" $2 2.14|"" $3 dda3a3a92924a99a752dea12dd5db470|"" $4 WPT_SERVER_URL
     log "Building IE ${ver} VM"
     build_ievm $ver
 
@@ -910,3 +894,4 @@ done
 
 # We made it!
 log "Done!"
+
