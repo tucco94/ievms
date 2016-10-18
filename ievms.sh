@@ -20,7 +20,7 @@ curl_opts=${CURL_OPTS:-""}
 reuse_xp=${REUSE_XP:-"no"}
 
 # Reuse Win7 virtual machines for IE versions that are supported.
-reuse_win7=${REUSE_WIN7:-"yes"}
+reuse_win7=${REUSE_WIN7:-"no"}
 
 # Reuse Win2k8 virtual machines for IE versions that are supported.
 #reuse_win2k8=${REUSE_WIN2K8:-"no"}
@@ -498,10 +498,6 @@ fi
 			Administrator --password "${guest_pass}"  -- add \
 			"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Active Setup\Installed Components\{A509B1A7-37EF-4b3f-8CFC-4F3A74704073}" \
 			/v “IsInstalled” /t REG_DWORD /d 0 /f
-		VBoxManage guestcontrol "${1}" run  "reg.exe" --username \
-			Administrator --password "${guest_pass}"  -- add \
-			"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Active Setup\Installed Components\{A509B1A8-37EF-4b3f-8CFC-4F3A74704073}" \
-			/v “IsInstalled” /t REG_DWORD /d 0 /f
 		guest_control_exec "${1}" "cmd.exe" /c \
 			"Rundll32 iesetup.dll,IEHardenUser"
 		guest_control_exec "${1}" "cmd.exe" /c \
@@ -512,22 +508,15 @@ fi
 			Administrator --password "${guest_pass}"  -- add \
 			"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Setup\OC Manager\Subcomponents" \
 			/v “iehardenadmin” /t REG_DWORD /d 0 /f
-		VBoxManage guestcontrol "${1}" run  "reg.exe" --username \
-			Administrator --password "${guest_pass}"  -- add \
-			"HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\Netlogon\Parameters" \
-			/v “DisablePasswordChange” /t REG_DWORD /d 1 /f
-		VBoxManage guestcontrol "${1}" run  "reg.exe" --username \
-			Administrator --password "${guest_pass}"  -- add \
-			"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Setup\OC Manager\Subcomponents" \
-			/v “iehardenuser” /t REG_DWORD /d 0 /f
 		VBoxManage guestcontrol "${1}" run "reg.exe" --username \
 			Administrator --password "${guest_pass}"  -- delete \
 			"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Active Setup\Installed Components\{A509B1A7-37EF-4b3f-8CFC-4F3A74704073}" \
 			/f /va
+		log "Disable Password Change"
 		VBoxManage guestcontrol "${1}" run  "reg.exe" --username \
-			Administrator --password "${guest_pass}"  -- delete \
-			"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Active Setup\Installed Components\{A509B1A8-37EF-4b3f-8CFC-4F3A74704073}" \
-			/f /va
+			Administrator --password "${guest_pass}"  -- add \
+			"HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\Netlogon\Parameters" \
+			/v "DisablePasswordChange" /t REG_DWORD /d 1 /f
 		log "Disable LUA"
                 guest_control_exec "${1}" "cmd.exe" /c \
                 "echo start /wait %windir%\System32\reg.exe ADD HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System /v EnableLUA /t REG_DWORD /d 0 /f >> c:\webpagetest\wpt.bat"
@@ -669,8 +658,6 @@ install_ie_win2k8() { # vm url md5
     guest_control_exec "${1}" "cmd.exe" /c \
     "echo start /wait ${dest} /passive /norestart >C:\\Users\\${guest_user}\\ievms.bat"
 #test disable IE SI after install IE upgrade
-    guest_control_exec "${1}" "cmd.exe" /c \
-    "echo start /wait %windir%\System32\reg.exe ADD HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Active Setup\\Installed Components\\{A509B1A7-37EF-4b3f-8CFC-4F3A74704073}\\ /v "IsInstalled" /t REG_DWORD /d 0 /f >> C:\\Users\\${guest_user}\\ievms.bat"
     guest_control_exec "${1}" "cmd.exe" /c \
     "echo start /wait %windir%\System32\reg.exe ADD HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Active Setup\\Installed Components\\{A509B1A8-37EF-4b3f-8CFC-4F3A74704073}\\ /v "IsInstalled" /t REG_DWORD /d 0 /f  >>  C:\\Users\\${guest_user}\\ievms.bat"
     guest_control_exec "${1}" "cmd.exe" /c \
@@ -866,8 +853,8 @@ build_ievm_ie11() {
 
 
 ## tests
-#ver=8
-#vmlocation=Moscow
+ver=8
+vmlocation=Moscow
 #install_wpt_agent "IE8 - WinXP" "${WPT_FILENAME}" "WinXP"
 #exit
 ## </tests>
@@ -880,11 +867,12 @@ check_unar
 #
 ## Install each requested virtual machine sequentially.
 #all_versions="6 7 8 9 10 11 EDGE" IE6 et 7 will not work w/wptdriver ; urlblast only
-all_versions="8 9 10 11"
+#all_versions="11"
+IEVMS_VERSIONS="11"
 for ver in ${IEVMS_VERSIONS:-$all_versions}
 do
     ### wpt
-    init_wpt_agent "${WPT_SERVER_LOCATION:-}" "${WPT_VERSION:-}" "${WPT_MD5:-}" "${WPT_SERVER_URL:-}" # "" $1 IEVM(_IE8)|"" $2 2.14|"" $3 dda3a3a92924a99a752dea12dd5db470|"" $4 WPT_SERVER_URL
+    init_wpt_agent "${vmlocation}" "2.18" "c92c2257a9a3efe265b52876bd0417bb" "perfs.digitas.fr" 
     log "Building IE ${ver} VM"
     build_ievm $ver
 
@@ -894,4 +882,5 @@ done
 
 # We made it!
 log "Done!"
+
 
